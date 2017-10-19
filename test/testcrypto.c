@@ -1454,77 +1454,156 @@ abts_suite *testcrypto(abts_suite *suite)
 {
     suite = ADD_SUITE(suite);
 
+    enum {
+        NSS_DRIVER_SELECTED = 0x0001,
+        OPENSSL_DRIVER_SELECTED = 0x0002,
+        COMMONCRYPTO_DRIVER_SELECTED = 0x0004
+    };
+
+    unsigned int crypto_driver_selection = (NSS_DRIVER_SELECTED | OPENSSL_DRIVER_SELECTED | COMMONCRYPTO_DRIVER_SELECTED);
+
+    if (getenv("APU_TEST_NSS")) {
+        if (strncasecmp(getenv("APU_TEST_NSS"), "on", 2) == 0) {
+            crypto_driver_selection |= NSS_DRIVER_SELECTED;
+        }
+        else {
+            crypto_driver_selection &= (~NSS_DRIVER_SELECTED);
+        }
+    }
+    if (getenv("APU_TEST_OPENSSL")) {
+        if (strncasecmp(getenv("APU_TEST_OPENSSL"), "on", 2) == 0) {
+            crypto_driver_selection |= OPENSSL_DRIVER_SELECTED;
+        }
+        else {
+            crypto_driver_selection &= (~OPENSSL_DRIVER_SELECTED);
+        }
+    }
+    if (getenv("APU_TEST_COMMONCRYPTO")) {
+        if (strncasecmp(getenv("APU_TEST_COMMONCRYPTO"), "on", 2) == 0) {
+            crypto_driver_selection |= COMMONCRYPTO_DRIVER_SELECTED;
+        }
+        else {
+            crypto_driver_selection &= (~COMMONCRYPTO_DRIVER_SELECTED);
+        }
+    }
+    
     /* test simple init and shutdown */
     abts_run_test(suite, test_crypto_init, NULL);
 
     /* test key parsing - openssl */
-    abts_run_test(suite, test_crypto_key_openssl, NULL);
+    if (crypto_driver_selection & OPENSSL_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_key_openssl, NULL);
+    }
 
     /* test key parsing - nss */
-    abts_run_test(suite, test_crypto_key_nss, NULL);
+    if (crypto_driver_selection & NSS_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_key_nss, NULL);
+    }
 
     /* test key parsing - commoncrypto */
-    abts_run_test(suite, test_crypto_key_commoncrypto, NULL);
+    if (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_key_commoncrypto, NULL);
+    }
 
     /* test a simple encrypt / decrypt operation - openssl */
-    abts_run_test(suite, test_crypto_block_openssl, NULL);
+    if (crypto_driver_selection & OPENSSL_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_block_openssl, NULL);
+    }
 
     /* test a padded encrypt / decrypt operation - openssl */
-    abts_run_test(suite, test_crypto_block_openssl_pad, NULL);
+    if (crypto_driver_selection & OPENSSL_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_block_openssl_pad, NULL);
+    }
 
     /* test a simple encrypt / decrypt operation - nss */
-    abts_run_test(suite, test_crypto_block_nss, NULL);
+    if (crypto_driver_selection & NSS_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_block_nss, NULL);
+    }
 
     /* test a padded encrypt / decrypt operation - nss */
-    abts_run_test(suite, test_crypto_block_nss_pad, NULL);
+    if (crypto_driver_selection & NSS_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_block_nss_pad, NULL);
+    }
 
     /* test a simple encrypt / decrypt operation - commoncrypto */
-    abts_run_test(suite, test_crypto_block_commoncrypto, NULL);
+    if (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_block_commoncrypto, NULL);
+    }
 
     /* test a padded encrypt / decrypt operation - commoncrypto */
-    abts_run_test(suite, test_crypto_block_commoncrypto_pad, NULL);
+    if (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_block_commoncrypto_pad, NULL);
+    }
 
     /* test encrypt nss / decrypt openssl */
-    abts_run_test(suite, test_crypto_block_nss_openssl, NULL);
+    if ((crypto_driver_selection & NSS_DRIVER_SELECTED) && (crypto_driver_selection & OPENSSL_DRIVER_SELECTED)) {
+        abts_run_test(suite, test_crypto_block_nss_openssl, NULL);
+    }
 
     /* test padded encrypt nss / decrypt openssl */
-    abts_run_test(suite, test_crypto_block_nss_openssl_pad, NULL);
+    if ((crypto_driver_selection & NSS_DRIVER_SELECTED) && (crypto_driver_selection & OPENSSL_DRIVER_SELECTED)) {
+        abts_run_test(suite, test_crypto_block_nss_openssl_pad, NULL);
+    }
 
     /* test encrypt openssl / decrypt nss */
-    abts_run_test(suite, test_crypto_block_openssl_nss, NULL);
+    if ((crypto_driver_selection & NSS_DRIVER_SELECTED) && (crypto_driver_selection & OPENSSL_DRIVER_SELECTED)) {
+        abts_run_test(suite, test_crypto_block_openssl_nss, NULL);
+    }
 
     /* test padded encrypt openssl / decrypt nss */
-    abts_run_test(suite, test_crypto_block_openssl_nss_pad, NULL);
+    if ((crypto_driver_selection & NSS_DRIVER_SELECTED) && (crypto_driver_selection & OPENSSL_DRIVER_SELECTED)) {
+        abts_run_test(suite, test_crypto_block_openssl_nss_pad, NULL);
+    }
 
     /* test encrypt openssl / decrypt commoncrypto */
-    abts_run_test(suite, test_crypto_block_openssl_commoncrypto, NULL);
+    if ((crypto_driver_selection & OPENSSL_DRIVER_SELECTED) && (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED)) {
+        abts_run_test(suite, test_crypto_block_openssl_commoncrypto, NULL);
+    }
 
     /* test padded encrypt openssl / decrypt commoncrypto */
-    abts_run_test(suite, test_crypto_block_openssl_commoncrypto_pad, NULL);
+    if ((crypto_driver_selection & OPENSSL_DRIVER_SELECTED) && (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED)) {
+        abts_run_test(suite, test_crypto_block_openssl_commoncrypto_pad, NULL);
+    }
 
     /* test encrypt commoncrypto / decrypt openssl */
-    abts_run_test(suite, test_crypto_block_commoncrypto_openssl, NULL);
+    if ((crypto_driver_selection & OPENSSL_DRIVER_SELECTED) && (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED)) {
+        abts_run_test(suite, test_crypto_block_commoncrypto_openssl, NULL);
+    }
 
     /* test padded encrypt commoncrypto / decrypt openssl */
-    abts_run_test(suite, test_crypto_block_commoncrypto_openssl_pad, NULL);
+    if ((crypto_driver_selection & OPENSSL_DRIVER_SELECTED) && (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED)) {
+        abts_run_test(suite, test_crypto_block_commoncrypto_openssl_pad, NULL);
+    }
 
     /* test block key types openssl */
-    abts_run_test(suite, test_crypto_get_block_key_types_openssl, NULL);
+    if (crypto_driver_selection & OPENSSL_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_get_block_key_types_openssl, NULL);
+    }
 
     /* test block key types nss */
-    abts_run_test(suite, test_crypto_get_block_key_types_nss, NULL);
+    if (crypto_driver_selection & NSS_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_get_block_key_types_nss, NULL);
+    }
 
     /* test block key types commoncrypto */
-    abts_run_test(suite, test_crypto_get_block_key_types_commoncrypto, NULL);
+    if (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_get_block_key_types_commoncrypto, NULL);
+    }
 
     /* test block key modes openssl */
-    abts_run_test(suite, test_crypto_get_block_key_modes_openssl, NULL);
+    if (crypto_driver_selection & OPENSSL_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_get_block_key_modes_openssl, NULL);
+    }
 
     /* test block key modes nss */
-    abts_run_test(suite, test_crypto_get_block_key_modes_nss, NULL);
+    if (crypto_driver_selection & NSS_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_get_block_key_modes_nss, NULL);
+    }
 
     /* test block key modes commoncrypto */
-    abts_run_test(suite, test_crypto_get_block_key_modes_commoncrypto, NULL);
+    if (crypto_driver_selection & COMMONCRYPTO_DRIVER_SELECTED) {
+        abts_run_test(suite, test_crypto_get_block_key_modes_commoncrypto, NULL);
+    }
 
     abts_run_test(suite, test_crypto_memzero, NULL);
     abts_run_test(suite, test_crypto_equals, NULL);
